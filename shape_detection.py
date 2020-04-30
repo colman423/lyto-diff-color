@@ -1,25 +1,34 @@
 import cv2
 import numpy as np
+from config import config
+
 
 class ShapeAnalysis:
-    def __init__(self):
+    def __init__(self, debug=False):
+        self.shapes = {'triangle': 0, 'rectangle': 0,
+                       'polygons': 0, 'circles': 0}
+        self.scale = config.shape_detection_scale
+        self.debug = debug
+        
+
+    def analysis(self, frame):
         self.shapes = {'triangle': 0, 'rectangle': 0,
                        'polygons': 0, 'circles': 0}
 
-    def analysis(self, frame, scale=1.2, debug=False):
-        
-        frame = cv2.resize(frame, None, fx=scale, fy=scale)
+        frame = cv2.resize(frame, None, fx=self.scale, fy=self.scale)
 
         h, w, ch = frame.shape
 
-        if debug:
+        if self.debug:
             result = np.zeros((h, w, ch), dtype=np.uint8)
-            
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        binary = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 99, 0)
 
-        contours, hierarchy = cv2.findContours(binary, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
-        if debug:
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        binary = cv2.adaptiveThreshold(
+            gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 99, 0)
+
+        contours, hierarchy = cv2.findContours(
+            binary, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+        if self.debug:
             cv2.drawContours(frame, contours, -1, (0, 0, 255), 3)
             cv2.imshow("gray", gray)
             cv2.imwrite("./img/1 gray.png", gray)
@@ -47,7 +56,7 @@ class ShapeAnalysis:
                 count = count + 1
                 self.shapes['circles'] = count
                 shape_type = "圓形"
-            elif not debug:
+            elif not self.debug:
                 continue
             else:
                 if corners == 3:
@@ -77,13 +86,13 @@ class ShapeAnalysis:
 
             # 顏色分析
             color = frame[cy][cx]
-            if debug:
+            if self.debug:
                 cv2.circle(result, (cx, cy), 3, (0, 0, 255), -1)
                 print("color: {}".format(color),
-                    "position: {}".format((cx, cy)))
+                      "position: {}".format((cx, cy)))
                 cv2.drawContours(result, contours, cnt, (0, 255, 0), 2)
-            circle_list.append( ( np.array([cx, cy])/scale, color) )
-        if debug:
+            circle_list.append((np.array([cx, cy])/self.scale, color))
+        if self.debug:
             # 提取與繪制輪廓
             result_img = self.draw_text_info(result)
             cv2.imshow("Analysis Result", result_img)
@@ -107,14 +116,14 @@ class ShapeAnalysis:
 
 
 if __name__ == "__main__":
-    src = cv2.imread("./img/1588172096.6569731.png")
-      
+    src = cv2.imread("./img/screenshot-1588224583.221296.png")
+
     crop_y = 400
     crop_x = 40
 
     src = src[crop_y:, crop_x:-crop_x]
-    ld = ShapeAnalysis()
-    result = ld.analysis(src, debug=True, scale=1.5)
+    ld = ShapeAnalysis(debug=True)
+    result = ld.analysis(src)
     print("result", result)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
